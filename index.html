@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -85,63 +86,943 @@
             });
         }
 
+        // Clouds – fluffy layered puffs, slow drift
+        const clouds = [];
+        function makeCloud(xOverride) {
+            const x = xOverride !== undefined ? xOverride : Math.random() * canvas.width * 1.4 - canvas.width * 0.2;
+            return {
+                x,
+                y: Math.random() * canvas.height * 0.28 + 20,
+                speed: Math.random() * 0.18 + 0.06,
+                scale: Math.random() * 0.55 + 0.55,
+                alpha: Math.random() * 0.18 + 0.12,
+                // Each cloud has a set of puff offsets
+                puffs: [
+                    { dx: 0,   dy: 0,  r: 28 },
+                    { dx: 26,  dy: -8, r: 22 },
+                    { dx: -26, dy: -6, r: 20 },
+                    { dx: 50,  dy: 4,  r: 18 },
+                    { dx: -48, dy: 6,  r: 16 },
+                    { dx: 14,  dy: -20, r: 16 },
+                ]
+            };
+        }
+        for(let i = 0; i < 7; i++) clouds.push(makeCloud());
+
+        function drawCloud(cloud) {
+            ctx.save();
+            ctx.translate(cloud.x, cloud.y);
+            ctx.scale(cloud.scale, cloud.scale);
+            ctx.globalAlpha = cloud.alpha;
+            cloud.puffs.forEach(p => {
+                ctx.beginPath();
+                ctx.arc(p.dx, p.dy, p.r, 0, Math.PI * 2);
+                ctx.fillStyle = "rgba(255, 240, 230, 1)";
+                ctx.fill();
+            });
+            ctx.restore();
+            ctx.globalAlpha = 1;
+        }
+
+        // Antique gas lamp posts — 17th/18th century European style
+        const lampPostXs = [0.12, 0.38, 0.62, 0.88];
+
+        function drawStreetLamp(x, pavY) {
+            const col    = "#2a1a30";
+            const postH  = pavY * 0.42;
+            const topY   = pavY - postH;
+
+            ctx.save();
+            ctx.globalAlpha = 0.88;
+            ctx.fillStyle = col;
+            ctx.strokeStyle = col;
+            ctx.lineCap = "round";
+            ctx.lineJoin = "round";
+
+            // ── Ornate stepped base (3 tiers) ──
+            [[14,6],[10,5],[6,8]].forEach(([hw, hh], i) => {
+                const by = pavY - i * 7;
+                ctx.beginPath();
+                ctx.moveTo(x - hw, by);
+                ctx.lineTo(x + hw, by);
+                ctx.lineTo(x + hw - 2, by - hh);
+                ctx.lineTo(x - hw + 2, by - hh);
+                ctx.closePath();
+                ctx.fill();
+            });
+
+            // ── Tapered shaft: wide at base, narrow at top ──
+            // Drawn as a trapezoid that narrows slightly
+            ctx.beginPath();
+            ctx.moveTo(x - 3.5, pavY - 21);
+            ctx.lineTo(x + 3.5, pavY - 21);
+            ctx.lineTo(x + 2,   topY + 28);
+            ctx.lineTo(x - 2,   topY + 28);
+            ctx.closePath();
+            ctx.fill();
+
+            // ── Decorative collar rings on shaft (3 bands) ──
+            [0.25, 0.52, 0.75].forEach(f => {
+                const ry = pavY - 21 - (postH - 49) * f;
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(x - 4.5, ry);
+                ctx.lineTo(x + 4.5, ry);
+                ctx.stroke();
+            });
+
+            // ── Scrolled bracket arm ──
+            // Volute-style S-curve support from shaft top to lantern
+            const armX = x;
+            const armTopY = topY + 28;
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(armX, armTopY);
+            // scroll upward and outward
+            ctx.bezierCurveTo(
+                armX,      armTopY - 10,
+                armX + 10, armTopY - 22,
+                armX + 18, armTopY - 18
+            );
+            ctx.bezierCurveTo(
+                armX + 28, armTopY - 14,
+                armX + 26, armTopY - 28,
+                armX + 18, armTopY - 30
+            );
+            ctx.stroke();
+
+            // Small decorative curl at scroll end
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(armX + 16, armTopY - 30, 3, 0, Math.PI * 1.5);
+            ctx.stroke();
+
+            // ── Lantern body: hexagonal gas lamp cage ──
+            const lx = armX + 18;
+            const ly = armTopY - 30;
+            const lW = 11;   // half-width
+            const lH = 22;   // body height
+
+            // Roof cap — pyramid shape
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.moveTo(lx,      ly - 14);   // apex
+            ctx.lineTo(lx - lW - 2, ly - 2);
+            ctx.lineTo(lx + lW + 2, ly - 2);
+            ctx.closePath();
+            ctx.fill();
+
+            // Tiny finial spike on apex
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(lx, ly - 14);
+            ctx.lineTo(lx, ly - 20);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.arc(lx, ly - 20, 2, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Cage frame (front face + vertical glazing bars)
+            ctx.fillStyle = col;
+            ctx.beginPath();
+            ctx.rect(lx - lW, ly - 2, lW * 2, lH);
+            ctx.fill();
+
+            // Vertical glazing mullions (3 bars divide panes)
+            ctx.strokeStyle = col;
+            ctx.lineWidth = 1.5;
+            for (let b = 1; b < 3; b++) {
+                ctx.beginPath();
+                ctx.moveTo(lx - lW + (lW * 2 / 3) * b, ly - 2);
+                ctx.lineTo(lx - lW + (lW * 2 / 3) * b, ly + lH);
+                ctx.stroke();
+            }
+            // Horizontal mid-rail
+            ctx.beginPath();
+            ctx.moveTo(lx - lW, ly + lH * 0.45);
+            ctx.lineTo(lx + lW, ly + lH * 0.45);
+            ctx.stroke();
+
+            // Bottom base plate of lantern
+            ctx.fillStyle = col;
+            ctx.beginPath();
+            ctx.rect(lx - lW - 1, ly + lH, lW * 2 + 2, 4);
+            ctx.fill();
+
+            // ── Warm glow from flame ──
+            const glowCX = lx;
+            const glowCY = ly + lH * 0.4;
+            const glowR  = 42;
+            const glow = ctx.createRadialGradient(glowCX, glowCY, 2, glowCX, glowCY, glowR);
+            glow.addColorStop(0,   "rgba(255, 220, 130, 0.62)");
+            glow.addColorStop(0.35,"rgba(255, 190,  80, 0.22)");
+            glow.addColorStop(1,   "rgba(255, 160,  40, 0.00)");
+            ctx.fillStyle = glow;
+            ctx.beginPath();
+            ctx.arc(glowCX, glowCY, glowR, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Amber glass panes (between bars)
+            ctx.fillStyle = "rgba(255, 235, 160, 0.82)";
+            const paneW = (lW * 2 - 3) / 3;
+            for (let p = 0; p < 3; p++) {
+                // Upper pane
+                ctx.fillRect(lx - lW + 1.5 + p * (paneW + 1.5), ly - 1, paneW, lH * 0.42);
+                // Lower pane
+                ctx.fillRect(lx - lW + 1.5 + p * (paneW + 1.5), ly + lH * 0.45 + 1, paneW, lH * 0.52);
+            }
+
+            ctx.restore();
+            ctx.globalAlpha = 1;
+        }
+
+
+
         // Animation State
         let man1X = canvas.width + 100; 
         const man2X = canvas.width * 0.35; 
         const pavementY = canvas.height * 0.85;
         let walkCycle = 0;
+        let frameTime = 0;
 
         const maxSpeed = 5.0; 
         const minSpeed = 0.8; 
         let currentSpeed = maxSpeed;
 
-        function drawMan(x, y, color, isWalking, speedFactor) {
-            // Bounce and swing scale with speedFactor so he doesn't "moonwalk" when slow
+        // Improved character drawing — richer stick figure with hat, walking stick
+        function drawMan(x, y, color, isWalking, speedFactor, hasHat, hasWalkingStick) {
             const bounce = isWalking ? Math.abs(Math.sin(walkCycle)) * (7 * (speedFactor / maxSpeed + 0.2)) : 0;
             const legSwing = isWalking ? Math.sin(walkCycle) * (18 * (speedFactor / maxSpeed + 0.2)) : 0;
+            const armSwing = isWalking ? Math.sin(walkCycle) * (20 * (speedFactor / maxSpeed + 0.15)) : 0;
+
+            const headY = y - 70 - bounce;
+            const neckY = y - 61 - bounce;
+            const hipY  = y - 25 - bounce;
+            const shoulderY = y - 55 - bounce;
 
             ctx.strokeStyle = color;
             ctx.lineWidth = 3.5;
             ctx.lineCap = "round";
-            ctx.beginPath();
-            
+            ctx.lineJoin = "round";
+
             // Head
-            ctx.arc(x, y - 70 - bounce, 9, 0, Math.PI * 2);
-            // Body
-            ctx.moveTo(x, y - 61 - bounce);
-            ctx.lineTo(x, y - 25 - bounce);
-            // Legs
-            ctx.moveTo(x, y - 25 - bounce);
-            ctx.lineTo(x - 14 + legSwing, y);
-            ctx.moveTo(x, y - 25 - bounce);
-            ctx.lineTo(x + 14 - legSwing, y);
-            // Arms
-            ctx.moveTo(x, y - 55 - bounce);
-            ctx.lineTo(x - 18 - (legSwing * 0.4), y - 35);
-            ctx.moveTo(x, y - 55 - bounce);
-            ctx.lineTo(x + 18 + (legSwing * 0.4), y - 35);
-            
+            ctx.beginPath();
+            ctx.arc(x, headY, 9, 0, Math.PI * 2);
             ctx.stroke();
+
+            // Body
+            ctx.beginPath();
+            ctx.moveTo(x, neckY);
+            ctx.lineTo(x, hipY);
+            ctx.stroke();
+
+            // Legs with knee bend
+            const kneeOffset = isWalking ? Math.sin(walkCycle + 0.4) * 6 * (speedFactor / maxSpeed + 0.2) : 0;
+
+            ctx.beginPath();
+            ctx.moveTo(x, hipY);
+            ctx.quadraticCurveTo(x - 7 + legSwing * 0.4, hipY + 14 + kneeOffset, x - 14 + legSwing, y);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(x, hipY);
+            ctx.quadraticCurveTo(x + 7 - legSwing * 0.4, hipY + 14 - kneeOffset, x + 14 - legSwing, y);
+            ctx.stroke();
+
+            // Arms — swing opposite to legs; right arm holds stick so has limited swing
+            // Left arm swings freely
+            ctx.beginPath();
+            ctx.moveTo(x, shoulderY);
+            ctx.quadraticCurveTo(x - 9 + armSwing * 0.3, shoulderY + 10, x - 18 + armSwing, y - 35);
+            ctx.stroke();
+
+            // Right arm — reduced swing, angled slightly down to hold stick
+            const stickArmAngle = armSwing * 0.25;
+            const rightHandX = x + 16 - stickArmAngle;
+            const rightHandY = y - 32;
+            ctx.beginPath();
+            ctx.moveTo(x, shoulderY);
+            ctx.quadraticCurveTo(x + 8 - stickArmAngle * 0.3, shoulderY + 10, rightHandX, rightHandY);
+            ctx.stroke();
+
+            // Hat
+            if (hasHat) {
+                ctx.fillStyle = color;
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 2.5;
+                ctx.beginPath();
+                ctx.ellipse(x, headY - 8, 13, 4, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.rect(x - 8, headY - 24, 16, 16);
+                ctx.fill();
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 3.5;
+            }
+
+            // Umbrella — canopy sits above head, larger dome
+            if (hasWalkingStick) {
+                const uArmAngle = armSwing * 0.25;
+                const handleX = x + 16 - uArmAngle;
+                const handleY = y - 32;
+
+                // Shaft rises from hand up past the head
+                const shaftTopX = handleX - 2;               // slight lean left so canopy centres over figure
+                const shaftTopY = headY - 28;                // well above the head
+
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 2.5;
+                ctx.lineCap = "round";
+                ctx.beginPath();
+                ctx.moveTo(handleX, handleY);
+                ctx.lineTo(shaftTopX, shaftTopY);
+                ctx.stroke();
+
+                // J-hook handle
+                ctx.beginPath();
+                ctx.arc(handleX + 5, handleY, 5, Math.PI, Math.PI * 1.85);
+                ctx.stroke();
+
+                // Canopy — bigger dome centred over the figure
+                const cR = 28;
+                const cX = shaftTopX;
+                const cY = shaftTopY + 5;
+
+                // Dome fill
+                ctx.fillStyle = color;
+                ctx.globalAlpha = 0.88;
+                ctx.beginPath();
+                ctx.arc(cX, cY, cR, Math.PI, 0);
+                ctx.closePath();
+                ctx.fill();
+
+                // Scalloped hem — 6 arcs
+                ctx.globalAlpha = 1;
+                ctx.fillStyle = color;
+                const scallops = 6;
+                const sR = cR / scallops;
+                for (let s = 0; s < scallops; s++) {
+                    const sx = cX - cR + sR + s * sR * 2;
+                    ctx.beginPath();
+                    ctx.arc(sx, cY, sR, 0, Math.PI);
+                    ctx.fill();
+                }
+
+                // Spoke lines from centre to hem
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 1;
+                ctx.globalAlpha = 0.35;
+                for (let s = 0; s <= scallops; s++) {
+                    const angle = Math.PI + (s / scallops) * Math.PI;
+                    ctx.beginPath();
+                    ctx.moveTo(cX, cY);
+                    ctx.lineTo(cX + Math.cos(angle) * cR, cY + Math.sin(angle) * cR);
+                    ctx.stroke();
+                }
+                ctx.globalAlpha = 1;
+
+                // Tip finial
+                ctx.fillStyle = color;
+                ctx.beginPath();
+                ctx.arc(cX, shaftTopY - 2, 3, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 3.5;
+                ctx.lineCap = "round";
+            }
+
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 3.5;
         }
 
+        // ── 17th–18th Century European Cityscape ─────────────────────────────
+        function drawCityscape(pavY) {
+            const W = canvas.width;
+
+            // ── Shared helpers ────────────────────────────────────────────────
+            function setStyle(col, alpha) {
+                ctx.fillStyle = col;
+                ctx.strokeStyle = col;
+                ctx.globalAlpha = alpha;
+            }
+
+            // Arched window: drawn as rect + semicircle top
+            function archWindow(x, y, w, h, col) {
+                ctx.fillStyle = col;
+                ctx.fillRect(x, y + w * 0.5, w, h - w * 0.5);
+                ctx.beginPath();
+                ctx.arc(x + w * 0.5, y + w * 0.5, w * 0.5, Math.PI, 0);
+                ctx.fill();
+            }
+
+            // Chimney stack with pot
+            function chimney(x, topY, col) {
+                ctx.fillStyle = col;
+                ctx.fillRect(x - 3, topY - 18, 6, 18);
+                ctx.fillRect(x - 4.5, topY - 21, 9, 3);  // cap
+                ctx.beginPath();
+                ctx.arc(x, topY - 24, 2.5, 0, Math.PI * 2); // pot
+                ctx.fill();
+            }
+
+            // Dormer window in mansard slope
+            function dormer(cx, roofTopY, slopeH, col) {
+                const dw = 9, dh = 10;
+                const dy = roofTopY + slopeH * 0.35;
+                ctx.fillStyle = col;
+                // tiny gable
+                ctx.beginPath();
+                ctx.moveTo(cx - dw * 0.5 - 1, dy);
+                ctx.lineTo(cx, dy - 5);
+                ctx.lineTo(cx + dw * 0.5 + 1, dy);
+                ctx.closePath();
+                ctx.fill();
+                ctx.fillRect(cx - dw * 0.5, dy, dw, dh);
+            }
+
+            // ── STRUCTURE DRAWING FUNCTIONS ───────────────────────────────────
+
+            // French/Parisian mansard townhouse — the dominant 17th-18th c. Paris form
+            function drawTownhouse(bx, w, h, pavY, col, alpha, winAlpha) {
+                ctx.save();
+                setStyle(col, alpha);
+                const by = pavY - h;
+                const slopeH = h * 0.32;   // mansard slope height
+                const topH   = h * 0.10;   // flat top above slope
+
+                // Body
+                ctx.fillRect(bx, by + slopeH + topH, w, h - slopeH - topH);
+
+                // Mansard lower slope (steep trapezoidal sides)
+                ctx.beginPath();
+                ctx.moveTo(bx,           by + slopeH + topH);
+                ctx.lineTo(bx + w * 0.1, by + topH);
+                ctx.lineTo(bx + w * 0.9, by + topH);
+                ctx.lineTo(bx + w,       by + slopeH + topH);
+                ctx.closePath();
+                ctx.fill();
+
+                // Flat top storey
+                ctx.fillRect(bx + w * 0.1, by, w * 0.8, topH + 2);
+
+                // Cornice line
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(bx - 2, by + slopeH + topH);
+                ctx.lineTo(bx + w + 2, by + slopeH + topH);
+                ctx.stroke();
+
+                // Dormers along slope (2–3 per building)
+                const nd = Math.max(2, Math.floor(w / 28));
+                for (let d = 0; d < nd; d++) {
+                    const cx = bx + w * (0.2 + d * (0.6 / Math.max(nd - 1, 1)));
+                    dormer(cx, by, slopeH + topH, col);
+                }
+
+                // Arched windows on main body (2 rows)
+                ctx.globalAlpha = winAlpha;
+                const bodyH = h - slopeH - topH;
+                const rows = Math.max(1, Math.floor(bodyH / 22));
+                const cols = Math.max(1, Math.floor(w / 16));
+                for (let r = 0; r < rows; r++) {
+                    for (let c = 0; c < cols; c++) {
+                        const seed = (bx * 11 + r * 17 + c * 29) % 100;
+                        if (seed < 55) {
+                            archWindow(
+                                bx + 4 + c * (w - 8) / cols,
+                                by + slopeH + topH + 5 + r * 22,
+                                8, 13, "rgba(255,220,140,1)"
+                            );
+                        }
+                    }
+                }
+
+                ctx.restore();
+                ctx.globalAlpha = 1;
+
+                // Chimneys (after restore so alpha = 1)
+                ctx.save();
+                ctx.globalAlpha = alpha;
+                ctx.fillStyle = col;
+                const nc = Math.max(1, Math.floor(w / 22));
+                for (let c = 0; c < nc; c++) {
+                    chimney(bx + w * (0.2 + c * (0.6 / Math.max(nc - 1, 1))), by, col);
+                }
+                ctx.restore();
+                ctx.globalAlpha = 1;
+            }
+
+            // Baroque church / chapel — square tower, octagonal lantern, thin spire
+            function drawBaroqueChurch(bx, pavY, col, alpha) {
+                ctx.save();
+                setStyle(col, alpha);
+                const navW  = 52, navH = 80;
+                const towW  = 20, towH = 145;
+                const lanH  = 30, lanW = 14;
+                const spikeH = 55;
+
+                // Nave body
+                ctx.fillRect(bx, pavY - navH, navW, navH);
+
+                // Stepped gable / triangular pediment on nave
+                ctx.beginPath();
+                ctx.moveTo(bx - 3,           pavY - navH);
+                ctx.lineTo(bx + navW * 0.5,  pavY - navH - navH * 0.22);
+                ctx.lineTo(bx + navW + 3,    pavY - navH);
+                ctx.closePath();
+                ctx.fill();
+
+                // Pilasters on nave (vertical ribs)
+                ctx.lineWidth = 3;
+                [0.18, 0.5, 0.82].forEach(f => {
+                    ctx.beginPath();
+                    ctx.moveTo(bx + navW * f, pavY - navH);
+                    ctx.lineTo(bx + navW * f, pavY);
+                    ctx.stroke();
+                });
+
+                // Tower (offset right)
+                const tx = bx + navW - towW * 0.5;
+                ctx.fillRect(tx, pavY - towH, towW, towH);
+
+                // Decorative string courses on tower
+                ctx.lineWidth = 2;
+                [0.35, 0.65].forEach(f => {
+                    ctx.beginPath();
+                    ctx.moveTo(tx - 1, pavY - towH * f);
+                    ctx.lineTo(tx + towW + 1, pavY - towH * f);
+                    ctx.stroke();
+                });
+
+                // Octagonal lantern drum
+                const lx = tx + towW * 0.5, lTopY = pavY - towH;
+                ctx.beginPath();
+                ctx.moveTo(lx - lanW * 0.5,  lTopY);
+                ctx.lineTo(lx - lanW * 0.45, lTopY - lanH * 0.15);
+                ctx.lineTo(lx - lanW * 0.35, lTopY - lanH * 0.5);
+                ctx.lineTo(lx - lanW * 0.3,  lTopY - lanH);
+                ctx.lineTo(lx + lanW * 0.3,  lTopY - lanH);
+                ctx.lineTo(lx + lanW * 0.35, lTopY - lanH * 0.5);
+                ctx.lineTo(lx + lanW * 0.45, lTopY - lanH * 0.15);
+                ctx.lineTo(lx + lanW * 0.5,  lTopY);
+                ctx.closePath();
+                ctx.fill();
+
+                // Baroque spire (slightly curved profile — entasis)
+                const spireBase = lTopY - lanH;
+                ctx.beginPath();
+                ctx.moveTo(lx - lanW * 0.28, spireBase);
+                ctx.quadraticCurveTo(lx - lanW * 0.22, spireBase - spikeH * 0.4, lx, spireBase - spikeH);
+                ctx.quadraticCurveTo(lx + lanW * 0.22, spireBase - spikeH * 0.4, lx + lanW * 0.28, spireBase);
+                ctx.closePath();
+                ctx.fill();
+
+                // Cross finial
+                ctx.lineWidth = 2.5;
+                ctx.beginPath();
+                ctx.moveTo(lx, spireBase - spikeH);
+                ctx.lineTo(lx, spireBase - spikeH - 10);
+                ctx.moveTo(lx - 4, spireBase - spikeH - 5);
+                ctx.lineTo(lx + 4, spireBase - spikeH - 5);
+                ctx.stroke();
+
+                // Rose window (circular) on nave
+                ctx.beginPath();
+                ctx.arc(bx + navW * 0.5, pavY - navH * 0.55, 7, 0, Math.PI * 2);
+                ctx.stroke();
+
+                // Arched nave entrance
+                ctx.beginPath();
+                ctx.arc(bx + navW * 0.5, pavY - 10, 10, Math.PI, 0);
+                ctx.fill();
+                ctx.fillRect(bx + navW * 0.5 - 10, pavY - 10, 20, 10);
+
+                // Chimney-less but add a bell-opening hint on tower
+                ctx.globalAlpha = alpha * 0.6;
+                archWindow(tx + towW * 0.5 - 4, pavY - towH * 0.28, 8, 14, col);
+
+                ctx.restore();
+                ctx.globalAlpha = 1;
+            }
+
+            // Neoclassical civic building — pediment, columns, wide flat facade
+            // Think: Royal Exchange, early Hôtel de Ville
+            function drawNeoclassical(bx, w, h, pavY, col, alpha, winAlpha) {
+                ctx.save();
+                setStyle(col, alpha);
+                const by = pavY - h;
+
+                // Body
+                ctx.fillRect(bx, by, w, h);
+
+                // Triangular pediment (centred, spanning middle 60%)
+                const pw = w * 0.6, px = bx + w * 0.2;
+                ctx.beginPath();
+                ctx.moveTo(px - 3,         by);
+                ctx.lineTo(px + pw * 0.5,  by - h * 0.2);
+                ctx.lineTo(px + pw + 3,    by);
+                ctx.closePath();
+                ctx.fill();
+
+                // Cornice band
+                ctx.fillRect(bx - 3, by - 2, w + 6, 6);
+
+                // Pilasters/columns along base (vertical ribs, evenly spaced)
+                ctx.lineWidth = 3.5;
+                const nc = Math.floor(w / 18);
+                for (let c = 0; c <= nc; c++) {
+                    const cx = bx + (w / nc) * c;
+                    ctx.beginPath();
+                    ctx.moveTo(cx, by + 4);
+                    ctx.lineTo(cx, pavY);
+                    ctx.stroke();
+                }
+
+                // Rusticated base (bottom 20% of body, horizontal lines)
+                ctx.lineWidth = 1.5;
+                ctx.globalAlpha = alpha * 0.4;
+                for (let r = 0; r < 4; r++) {
+                    ctx.beginPath();
+                    ctx.moveTo(bx, by + h * 0.8 + r * (h * 0.2 / 4));
+                    ctx.lineTo(bx + w, by + h * 0.8 + r * (h * 0.2 / 4));
+                    ctx.stroke();
+                }
+                ctx.globalAlpha = alpha;
+
+                // Arched windows (2 rows above rustication)
+                ctx.globalAlpha = winAlpha;
+                const rows = 2, cols = Math.max(2, Math.floor(w / 20));
+                for (let r = 0; r < rows; r++) {
+                    for (let c = 0; c < cols; c++) {
+                        const seed = (bx * 9 + r * 19 + c * 37) % 100;
+                        if (seed < 60) {
+                            archWindow(
+                                bx + 6 + c * (w - 12) / cols,
+                                by + 8 + r * 24,
+                                9, 15, "rgba(255,215,130,1)"
+                            );
+                        }
+                    }
+                }
+
+                ctx.restore();
+                ctx.globalAlpha = 1;
+
+                // Chimneys flanking pediment
+                ctx.save();
+                ctx.globalAlpha = alpha;
+                chimney(bx + w * 0.15, by, col);
+                chimney(bx + w * 0.85, by, col);
+                ctx.restore();
+                ctx.globalAlpha = 1;
+            }
+
+            // Baroque cathedral — wide, twin bell towers, large dome, flying buttress hints
+            function drawCathedral(bx, pavY, col, alpha) {
+                ctx.save();
+                setStyle(col, alpha);
+                const W2    = 90, H2 = 100;       // nave
+                const twW   = 22, twH = 170;       // twin towers
+                const domR  = 20;                  // dome radius
+                const spiH  = 65;                  // tower spire height
+
+                // Nave body
+                ctx.fillRect(bx + twW, pavY - H2, W2, H2);
+
+                // Stepped apse bump at rear
+                ctx.fillRect(bx + twW + W2 * 0.3, pavY - H2 * 0.75, W2 * 0.4, H2 * 0.75);
+
+                // Left tower
+                ctx.fillRect(bx, pavY - twH, twW, twH);
+                // Right tower
+                ctx.fillRect(bx + twW + W2, pavY - twH, twW, twH);
+
+                // String courses on towers
+                ctx.lineWidth = 1.8;
+                [0.4, 0.65, 0.82].forEach(f => {
+                    [bx, bx + twW + W2].forEach(tx => {
+                        ctx.beginPath();
+                        ctx.moveTo(tx - 1, pavY - twH * f);
+                        ctx.lineTo(tx + twW + 1, pavY - twH * f);
+                        ctx.stroke();
+                    });
+                });
+
+                // Tower spires (octagonal profile)
+                [bx + twW * 0.5, bx + twW + W2 + twW * 0.5].forEach(sx => {
+                    const spireBase = pavY - twH;
+                    ctx.beginPath();
+                    ctx.moveTo(sx - twW * 0.4, spireBase);
+                    ctx.quadraticCurveTo(sx - twW * 0.15, spireBase - spiH * 0.5, sx, spireBase - spiH);
+                    ctx.quadraticCurveTo(sx + twW * 0.15, spireBase - spiH * 0.5, sx + twW * 0.4, spireBase);
+                    ctx.closePath();
+                    ctx.fill();
+
+                    // Cross
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.moveTo(sx, spireBase - spiH);
+                    ctx.lineTo(sx, spireBase - spiH - 12);
+                    ctx.moveTo(sx - 5, spireBase - spiH - 6);
+                    ctx.lineTo(sx + 5, spireBase - spiH - 6);
+                    ctx.stroke();
+                });
+
+                // Central baroque dome above nave crossing
+                const domeX = bx + twW + W2 * 0.5;
+                const drumH = 18;
+                // Drum
+                ctx.fillRect(domeX - domR * 0.7, pavY - H2 - drumH, domR * 1.4, drumH);
+                // Dome
+                ctx.beginPath();
+                ctx.arc(domeX, pavY - H2 - drumH, domR, Math.PI, 0);
+                ctx.closePath();
+                ctx.fill();
+                // Lantern on dome
+                ctx.fillRect(domeX - 4, pavY - H2 - drumH - domR - 12, 8, 12);
+                ctx.beginPath();
+                ctx.moveTo(domeX - 4, pavY - H2 - drumH - domR - 12);
+                ctx.lineTo(domeX,     pavY - H2 - drumH - domR - 22);
+                ctx.lineTo(domeX + 4, pavY - H2 - drumH - domR - 12);
+                ctx.closePath();
+                ctx.fill();
+
+                // Flying buttress hints (diagonal strokes from nave to aisle walls)
+                ctx.lineWidth = 2.5;
+                ctx.globalAlpha = alpha * 0.7;
+                [[bx + twW + 12, H2 * 0.6], [bx + twW + W2 - 12, H2 * 0.6]].forEach(([bsx, bsh]) => {
+                    ctx.beginPath();
+                    ctx.moveTo(bsx, pavY - bsh);
+                    ctx.lineTo(bsx + (bsx > bx + twW + W2 * 0.5 ? 10 : -10), pavY - bsh * 0.55);
+                    ctx.stroke();
+                });
+
+                // Rose window
+                ctx.globalAlpha = alpha;
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.arc(bx + twW + W2 * 0.5, pavY - H2 * 0.62, 9, 0, Math.PI * 2);
+                ctx.stroke();
+                // Spokes
+                for (let s = 0; s < 8; s++) {
+                    const a = (s / 8) * Math.PI * 2;
+                    ctx.beginPath();
+                    ctx.moveTo(bx + twW + W2 * 0.5, pavY - H2 * 0.62);
+                    ctx.lineTo(bx + twW + W2 * 0.5 + Math.cos(a) * 9, pavY - H2 * 0.62 + Math.sin(a) * 9);
+                    ctx.stroke();
+                }
+
+                // Grand arched entrance
+                ctx.beginPath();
+                ctx.arc(bx + twW + W2 * 0.5, pavY - 12, 14, Math.PI, 0);
+                ctx.fill();
+                ctx.fillRect(bx + twW + W2 * 0.5 - 14, pavY - 12, 28, 12);
+
+                ctx.restore();
+                ctx.globalAlpha = 1;
+            }
+
+            // Georgian terrace row — uniform repeated townhouses typical of London 1700s
+            function drawTerrace(bx, pavY, col, alpha, winAlpha) {
+                ctx.save();
+                const unitW = 26, units = 4, h = 88;
+                setStyle(col, alpha);
+
+                for (let u = 0; u < units; u++) {
+                    const ux = bx + u * unitW;
+                    const by = pavY - h;
+                    ctx.fillRect(ux, by, unitW - 1, h);
+
+                    // Parapet coping (flat-topped with slight raised edge)
+                    ctx.fillRect(ux - 1, by - 5, unitW + 1, 5);
+
+                    // Simple stepped chimney per unit
+                    chimney(ux + unitW * 0.5, by - 5, col);
+
+                    // Cornice
+                    ctx.lineWidth = 1.5;
+                    ctx.beginPath();
+                    ctx.moveTo(ux, by + h * 0.12);
+                    ctx.lineTo(ux + unitW - 1, by + h * 0.12);
+                    ctx.stroke();
+
+                    // Sash windows (rectangular with vertical divider — Georgian style)
+                    ctx.globalAlpha = winAlpha;
+                    ctx.fillStyle = "rgba(255,215,130,1)";
+                    const rows = 3;
+                    for (let r = 0; r < rows; r++) {
+                        const seed = (bx * 13 + u * 23 + r * 41) % 100;
+                        if (seed < 65) {
+                            const wy = by + h * 0.16 + r * 22;
+                            ctx.fillRect(ux + 5, wy, 7, 10);
+                            ctx.fillRect(ux + 14, wy, 7, 10);
+                        }
+                    }
+                    ctx.globalAlpha = alpha;
+                    ctx.fillStyle = col;
+                    // Door arch at ground level
+                    ctx.beginPath();
+                    ctx.arc(ux + unitW * 0.5, pavY - 8, 5, Math.PI, 0);
+                    ctx.fill();
+                    ctx.fillRect(ux + unitW * 0.5 - 5, pavY - 8, 10, 8);
+                }
+
+                ctx.restore();
+                ctx.globalAlpha = 1;
+            }
+
+            // Clock tower — town hall type (Baroque civic, 17th c.)
+            function drawClockTower(bx, pavY, col, alpha) {
+                ctx.save();
+                setStyle(col, alpha);
+                const tw = 28, th = 160;
+                const by = pavY - th;
+
+                // Tower shaft
+                ctx.fillRect(bx, by, tw, th);
+
+                // String courses
+                ctx.lineWidth = 2;
+                [0.3, 0.55, 0.72].forEach(f => {
+                    ctx.beginPath();
+                    ctx.moveTo(bx - 2, pavY - th * f);
+                    ctx.lineTo(bx + tw + 2, pavY - th * f);
+                    ctx.stroke();
+                });
+
+                // Clock face (circular)
+                ctx.lineWidth = 2;
+                const cfy = pavY - th * 0.48;
+                ctx.beginPath();
+                ctx.arc(bx + tw * 0.5, cfy, tw * 0.33, 0, Math.PI * 2);
+                ctx.stroke();
+                // Hands
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.moveTo(bx + tw * 0.5, cfy);
+                ctx.lineTo(bx + tw * 0.5, cfy - tw * 0.25);
+                ctx.moveTo(bx + tw * 0.5, cfy);
+                ctx.lineTo(bx + tw * 0.5 + tw * 0.2, cfy + tw * 0.08);
+                ctx.stroke();
+
+                // Belfry opening
+                ctx.globalAlpha = alpha * 0.5;
+                archWindow(bx + tw * 0.5 - 5, pavY - th * 0.28, 10, 16, col);
+                ctx.globalAlpha = alpha;
+
+                // Baroque topped lantern
+                const lanW = 18, lanH = 20;
+                const lx = bx + tw * 0.5;
+                ctx.fillRect(lx - lanW * 0.5, by - lanH, lanW, lanH);
+                // Four-sided roof
+                ctx.beginPath();
+                ctx.moveTo(lx - lanW * 0.5 - 2, by - lanH);
+                ctx.lineTo(lx,                  by - lanH - lanH * 0.9);
+                ctx.lineTo(lx + lanW * 0.5 + 2, by - lanH);
+                ctx.closePath();
+                ctx.fill();
+                // Finial
+                ctx.fillRect(lx - 1.5, by - lanH - lanH * 0.9 - 8, 3, 8);
+                ctx.beginPath();
+                ctx.arc(lx, by - lanH - lanH * 0.9 - 10, 3, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.restore();
+                ctx.globalAlpha = 1;
+            }
+
+            // ── COMPOSE THE SKYLINE ───────────────────────────────────────────
+            // Far layer — pale, low, distant
+            const c1 = "#3d2845", a1 = 0.38, w1 = 0.20;
+            drawTownhouse(W * 0.00, 38, 62, pavY, c1, a1, w1);
+            drawTownhouse(W * 0.06, 32, 55, pavY, c1, a1, w1);
+            drawTownhouse(W * 0.12, 44, 72, pavY, c1, a1, w1);
+            drawNeoclassical(W * 0.19, 70, 68, pavY, c1, a1, w1);
+            drawTownhouse(W * 0.30, 36, 60, pavY, c1, a1, w1);
+            drawTownhouse(W * 0.36, 42, 75, pavY, c1, a1, w1);
+            drawTownhouse(W * 0.43, 34, 58, pavY, c1, a1, w1);
+            drawNeoclassical(W * 0.50, 65, 70, pavY, c1, a1, w1);
+            drawTownhouse(W * 0.61, 38, 65, pavY, c1, a1, w1);
+            drawTownhouse(W * 0.67, 40, 72, pavY, c1, a1, w1);
+            drawNeoclassical(W * 0.74, 72, 66, pavY, c1, a1, w1);
+            drawTownhouse(W * 0.85, 36, 58, pavY, c1, a1, w1);
+            drawTownhouse(W * 0.91, 44, 68, pavY, c1, a1, w1);
+
+            // Mid layer — medium depth
+            const c2 = "#2e1e38", a2 = 0.56, w2 = 0.32;
+            drawTerrace(W * 0.00, pavY, c2, a2, w2);
+            drawBaroqueChurch(W * 0.11 - 26, pavY, c2, a2);
+            drawTownhouse(W * 0.22, 46, 100, pavY, c2, a2, w2);
+            drawTownhouse(W * 0.29, 40, 90,  pavY, c2, a2, w2);
+            drawClockTower(W * 0.37 - 14, pavY, c2, a2);
+            drawNeoclassical(W * 0.44, 80, 95, pavY, c2, a2, w2);
+            drawTownhouse(W * 0.56, 44, 88,  pavY, c2, a2, w2);
+            drawBaroqueChurch(W * 0.63 - 26, pavY, c2, a2);
+            drawTownhouse(W * 0.74, 48, 102, pavY, c2, a2, w2);
+            drawTerrace(W * 0.82, pavY, c2, a2, w2);
+            drawClockTower(W * 0.94 - 14, pavY, c2, a2);
+
+            // Near layer — darkest, flanking so characters are clear
+            const c3 = "#1e1228", a3 = 0.76, w3 = 0.44;
+            drawCathedral(W * 0.00 - 10, pavY, c3, a3);
+            drawTownhouse(W * 0.00 + 130, 52, 125, pavY, c3, a3, w3);
+            drawCathedral(W * 0.68, pavY, c3, a3);
+            drawTownhouse(W * 0.68 + 140, 48, 118, pavY, c3, a3, w3);
+        }
+        // ── end cityscape ──────────────────────────────────────────────────────
+
         function animate() {
+            frameTime++;
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            // 1. Draw Sunset Sun 
-            const sunY = pavementY - 400; // Moved significantly higher
-            const sunGradient = ctx.createRadialGradient(canvas.width * 0.75, sunY, 10, canvas.width * 0.75, sunY, 50);
-            sunGradient.addColorStop(0, "#FFDAB3"); // Inner red-orange
-            sunGradient.addColorStop(1, "#F29F58"); // Outer deep red
-            
-            ctx.shadowBlur = 40;
-            ctx.shadowColor = "#F29F58";
-            ctx.fillStyle = sunGradient;
+            // 1. Draw Moon (crescent)
+            const moonX = canvas.width * 0.75;
+            const moonY = pavementY - 400;
+            const moonR = 34;
+
+            // Soft glow halo
+            ctx.shadowBlur = 45;
+            ctx.shadowColor = "rgba(220, 230, 255, 0.6)";
+            const moonGlow = ctx.createRadialGradient(moonX, moonY, moonR * 0.2, moonX, moonY, moonR * 2.2);
+            moonGlow.addColorStop(0,   "rgba(230, 240, 255, 0.22)");
+            moonGlow.addColorStop(1,   "rgba(180, 200, 255, 0.00)");
+            ctx.fillStyle = moonGlow;
             ctx.beginPath();
-            ctx.arc(canvas.width * 0.75, sunY, 50, 0, Math.PI * 2); 
+            ctx.arc(moonX, moonY, moonR * 2.2, 0, Math.PI * 2);
             ctx.fill();
             ctx.shadowBlur = 0;
 
-            // 2. Draw Pavement/Line
+            // Full moon disc
+            ctx.fillStyle = "#EFE8D0";
+            ctx.beginPath();
+            ctx.arc(moonX, moonY, moonR, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Crescent cutout — offset circle masks the right side
+            ctx.globalCompositeOperation = "destination-out";
+            ctx.fillStyle = "rgba(0,0,0,1)";
+            ctx.beginPath();
+            ctx.arc(moonX + moonR * 0.55, moonY - moonR * 0.1, moonR * 0.88, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.globalCompositeOperation = "source-over";
+
+            // 2. Clouds (drawn before trees, behind everything)
+            clouds.forEach(cloud => {
+                drawCloud(cloud);
+                cloud.x += cloud.speed;
+                if (cloud.x > canvas.width * 1.2) {
+                    cloud.x = -120;
+                    cloud.y = Math.random() * canvas.height * 0.28 + 20;
+                }
+            });
+
+            // 3. Cityscape silhouette (behind lamps and pavement)
+            drawCityscape(pavementY);
+
+            // 4. Street lamps (behind pavement line)
+            lampPostXs.forEach(fx => drawStreetLamp(canvas.width * fx, pavementY));
+
+            // 4. Draw Pavement/Line
             ctx.strokeStyle = "rgba(255,255,255,0.9)";
             ctx.lineWidth = 3;
             ctx.beginPath();
@@ -149,7 +1030,7 @@
             ctx.lineTo(canvas.width, pavementY);
             ctx.stroke();
 
-            // 3. Draw Rain
+            // 5. Draw Rain
             ctx.strokeStyle = "rgba(200, 220, 255, 0.3)";
             ctx.lineWidth = 1;
             rainDrops.forEach(drop => {
@@ -161,41 +1042,37 @@
                 if(drop.y > canvas.height) drop.y = -20;
             });
 
-            // 4. Update Logic: Dynamic Speed
+
+
+            // 7. Update Logic: Dynamic Speed
             const dist = man1X - man2X;
             
-            // Slow down as he approaches (from 250px away until he is almost on top of him)
             if (dist > -50 && dist < 250) {
-                // Map distance to speed: closer = slower
                 let targetSpeed = minSpeed + (Math.abs(dist + 50) / 300) * (maxSpeed - minSpeed);
                 currentSpeed = Math.max(minSpeed, targetSpeed);
             } else {
-                // Accelerate back to normal speed after passing
                 currentSpeed = Math.min(maxSpeed, currentSpeed + 0.05);
             }
 
             man1X -= currentSpeed;
-            // Sync leg animation speed to actual walking speed
             walkCycle += (currentSpeed * 0.06) + 0.02;
 
-            // Draw Stationary Man
-            drawMan(man2X, pavementY, "rgba(255,255,255,0.8)", false, 0);
+            // Draw Stationary Man (has hat, no stick)
+            drawMan(man2X, pavementY, "rgba(255,255,255,0.8)", false, 0, true, false);
 
-            // Draw Walking Man
-            drawMan(man1X, pavementY, "#000", true, currentSpeed);
+            // Draw Walking Man (no hat, has walking stick)
+            drawMan(man1X, pavementY, "#000", true, currentSpeed, false, true);
 
-            // 5. Greeting Bubble
+            // 8. Greeting Bubble
             if (Math.abs(dist) < 70) {
                 ctx.font = "bold 16px Arial";
                 const textWidth = ctx.measureText("Hello World!").width;
                 
-                // Bubble Background
                 ctx.fillStyle = "white";
                 ctx.beginPath();
                 ctx.roundRect(man1X - (textWidth/2) - 10, pavementY - 130, textWidth + 20, 35, 10);
                 ctx.fill();
                 
-                // Bubble tail
                 ctx.beginPath();
                 ctx.moveTo(man1X, pavementY - 95);
                 ctx.lineTo(man1X - 5, pavementY - 105);
