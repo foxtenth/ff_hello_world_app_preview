@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Etztec Animation - Sunset Slowdown</title>
+    <style>
+        :root {
+            --bg-color: #1a1a2e; /* Darker background for sunset */
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: var(--bg-color);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+        }
+
+        /* Requirement: Canvas margins set to 70% of screen */
+        #canvas-container {
+            position: relative;
+            width: 70vw;
+            height: 70vh;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.8);
+            border-radius: 12px;
+            overflow: hidden;
+            /* Sunset gradient background */
+            background: linear-gradient(to bottom, #203a43, #2c5364, #bdc3c7);
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Requirement: Collaborator tab */
+        .collab-tab {
+            position: absolute;
+            top: 0;
+            left: 30px;
+            background: #ffffff;
+            padding: 10px 20px;
+            border-radius: 0 0 12px 12px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: #1a1a2e;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            z-index: 10;
+            letter-spacing: 0.5px;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="canvas-container">
+        <div class="collab-tab">to collaborator: careers@etztec.com | Hello World!<br>author: Finn Fox - foxtenth@gmail.com</div>
+        <canvas id="animationCanvas"></canvas>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('animationCanvas');
+        const ctx = canvas.getContext('2d');
+
+        function resize() {
+            canvas.width = canvas.offsetWidth;
+            canvas.height = canvas.offsetHeight;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        // Rain particles
+        const rainDrops = [];
+        for(let i = 0; i < 120; i++) {
+            rainDrops.push({
+                x: Math.random() * canvas.width,
+                y: Math.random() * canvas.height,
+                length: Math.random() * 15 + 5,
+                speed: Math.random() * 4 + 6
+            });
+        }
+
+        // Animation State
+        let man1X = canvas.width + 100; 
+        const man2X = canvas.width * 0.35; 
+        const pavementY = canvas.height * 0.85;
+        let walkCycle = 0;
+
+        const maxSpeed = 5.0; 
+        const minSpeed = 0.8; 
+        let currentSpeed = maxSpeed;
+
+        function drawMan(x, y, color, isWalking, speedFactor) {
+            // Bounce and swing scale with speedFactor so he doesn't "moonwalk" when slow
+            const bounce = isWalking ? Math.abs(Math.sin(walkCycle)) * (7 * (speedFactor / maxSpeed + 0.2)) : 0;
+            const legSwing = isWalking ? Math.sin(walkCycle) * (18 * (speedFactor / maxSpeed + 0.2)) : 0;
+
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 3.5;
+            ctx.lineCap = "round";
+            ctx.beginPath();
+            
+            // Head
+            ctx.arc(x, y - 70 - bounce, 9, 0, Math.PI * 2);
+            // Body
+            ctx.moveTo(x, y - 61 - bounce);
+            ctx.lineTo(x, y - 25 - bounce);
+            // Legs
+            ctx.moveTo(x, y - 25 - bounce);
+            ctx.lineTo(x - 14 + legSwing, y);
+            ctx.moveTo(x, y - 25 - bounce);
+            ctx.lineTo(x + 14 - legSwing, y);
+            // Arms
+            ctx.moveTo(x, y - 55 - bounce);
+            ctx.lineTo(x - 18 - (legSwing * 0.4), y - 35);
+            ctx.moveTo(x, y - 55 - bounce);
+            ctx.lineTo(x + 18 + (legSwing * 0.4), y - 35);
+            
+            ctx.stroke();
+        }
+
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // 1. Draw Sunset Sun 
+            const sunY = pavementY - 400; // Moved significantly higher
+            const sunGradient = ctx.createRadialGradient(canvas.width * 0.75, sunY, 10, canvas.width * 0.75, sunY, 50);
+            sunGradient.addColorStop(0, "#FFD580"); // Inner red-orange
+            sunGradient.addColorStop(1, "#FF9900"); // Outer deep red
+            
+            ctx.shadowBlur = 40;
+            ctx.shadowColor = "#FF5F1F";
+            ctx.fillStyle = sunGradient;
+            ctx.beginPath();
+            ctx.arc(canvas.width * 0.75, sunY, 50, 0, Math.PI * 2); 
+            ctx.fill();
+            ctx.shadowBlur = 0;
+
+            // 2. Draw Pavement/Line
+            ctx.strokeStyle = "rgba(255,255,255,0.2)";
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(0, pavementY);
+            ctx.lineTo(canvas.width, pavementY);
+            ctx.stroke();
+
+            // 3. Draw Rain
+            ctx.strokeStyle = "rgba(200, 220, 255, 0.3)";
+            ctx.lineWidth = 1;
+            rainDrops.forEach(drop => {
+                ctx.beginPath();
+                ctx.moveTo(drop.x, drop.y);
+                ctx.lineTo(drop.x, drop.y + drop.length);
+                ctx.stroke();
+                drop.y += drop.speed;
+                if(drop.y > canvas.height) drop.y = -20;
+            });
+
+            // 4. Update Logic: Dynamic Speed
+            const dist = man1X - man2X;
+            
+            // Slow down as he approaches (from 250px away until he is almost on top of him)
+            if (dist > -50 && dist < 250) {
+                // Map distance to speed: closer = slower
+                let targetSpeed = minSpeed + (Math.abs(dist + 50) / 300) * (maxSpeed - minSpeed);
+                currentSpeed = Math.max(minSpeed, targetSpeed);
+            } else {
+                // Accelerate back to normal speed after passing
+                currentSpeed = Math.min(maxSpeed, currentSpeed + 0.05);
+            }
+
+            man1X -= currentSpeed;
+            // Sync leg animation speed to actual walking speed
+            walkCycle += (currentSpeed * 0.06) + 0.02;
+
+            // Draw Stationary Man
+            drawMan(man2X, pavementY, "rgba(255,255,255,0.8)", false, 0);
+
+            // Draw Walking Man
+            drawMan(man1X, pavementY, "#000", true, currentSpeed);
+
+            // 5. Greeting Bubble
+            if (Math.abs(dist) < 70) {
+                ctx.font = "bold 16px Arial";
+                const textWidth = ctx.measureText("Hello World!").width;
+                
+                // Bubble Background
+                ctx.fillStyle = "white";
+                ctx.beginPath();
+                ctx.roundRect(man1X - (textWidth/2) - 10, pavementY - 130, textWidth + 20, 35, 10);
+                ctx.fill();
+                
+                // Bubble tail
+                ctx.beginPath();
+                ctx.moveTo(man1X, pavementY - 95);
+                ctx.lineTo(man1X - 5, pavementY - 105);
+                ctx.lineTo(man1X + 5, pavementY - 105);
+                ctx.fill();
+
+                ctx.fillStyle = "#333";
+                ctx.fillText("Hello World!", man1X - (textWidth/2), pavementY - 107);
+            }
+
+            if (man1X < -100) man1X = canvas.width + 100;
+
+            requestAnimationFrame(animate);
+        }
+
+        animate();
+    </script>
+</body>
+</html>
