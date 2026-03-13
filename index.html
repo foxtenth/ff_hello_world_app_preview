@@ -6,8 +6,8 @@
     <title>Etztec Animation - Sunset Slowdown</title>
     <style>
         :root {
-            --bg-color: #1a1a2e; /* Darker background for sunset */
-        }
+            --bg-color: #222222;         
+	}
 
         body {
             margin: 0;
@@ -22,16 +22,16 @@
         }
 
         /* Requirement: Canvas margins set to 70% of screen */
-        #canvas-container {
-            position: relative;
-            width: 70vw;
-            height: 70vh;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.8);
-            border-radius: 12px;
-            overflow: hidden;
-            /* Sunset gradient background */
-            background: linear-gradient(to bottom, #203a43, #2c5364, #bdc3c7);
-        }
+#canvas-container {
+    position: relative;
+    width: 70vw;
+    height: 70vh;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.8);
+    border-radius: 12px;
+    overflow: hidden;
+    /* NEW: Cinematic Sunset Gradient */
+    background: linear-gradient(to bottom, #574964 0%, #EFB6C8 60%, #FFD2A0 100%);
+}
 
         canvas {
             display: block;
@@ -130,11 +130,11 @@
             // 1. Draw Sunset Sun 
             const sunY = pavementY - 400; // Moved significantly higher
             const sunGradient = ctx.createRadialGradient(canvas.width * 0.75, sunY, 10, canvas.width * 0.75, sunY, 50);
-            sunGradient.addColorStop(0, "#FFD580"); // Inner red-orange
-            sunGradient.addColorStop(1, "#FF9900"); // Outer deep red
+            sunGradient.addColorStop(0, "#FFDAB3"); // Inner red-orange
+            sunGradient.addColorStop(1, "#F29F58"); // Outer deep red
             
             ctx.shadowBlur = 40;
-            ctx.shadowColor = "#FF5F1F";
+            ctx.shadowColor = "#F29F58";
             ctx.fillStyle = sunGradient;
             ctx.beginPath();
             ctx.arc(canvas.width * 0.75, sunY, 50, 0, Math.PI * 2); 
@@ -142,8 +142,8 @@
             ctx.shadowBlur = 0;
 
             // 2. Draw Pavement/Line
-            ctx.strokeStyle = "rgba(255,255,255,0.2)";
-            ctx.lineWidth = 4;
+            ctx.strokeStyle = "rgba(255,255,255,0.9)";
+            ctx.lineWidth = 3;
             ctx.beginPath();
             ctx.moveTo(0, pavementY);
             ctx.lineTo(canvas.width, pavementY);
